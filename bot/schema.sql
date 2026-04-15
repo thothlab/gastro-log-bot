@@ -55,11 +55,12 @@ CREATE TABLE IF NOT EXISTS food_entries (
 CREATE INDEX IF NOT EXISTS idx_food_user_ts ON food_entries(tg_id, ts);
 
 CREATE TABLE IF NOT EXISTS reminders (
-    id       INTEGER PRIMARY KEY AUTOINCREMENT,
-    tg_id    INTEGER NOT NULL REFERENCES users(tg_id) ON DELETE CASCADE,
-    kind     TEXT NOT NULL,
-    cron     TEXT NOT NULL,
-    payload  TEXT,
-    active   INTEGER NOT NULL DEFAULT 1
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    tg_id      INTEGER NOT NULL REFERENCES users(tg_id) ON DELETE CASCADE,
+    kind       TEXT NOT NULL,
+    cron       TEXT NOT NULL,
+    payload    TEXT,
+    active     INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_reminders_user ON reminders(tg_id, active);

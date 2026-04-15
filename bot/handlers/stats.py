@@ -10,7 +10,7 @@ from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from bot import texts
 from bot.keyboards import export_period_keyboard, stats_period_keyboard
 from bot.repositories import get_user, has_consent
-from bot.reports import build_chart, build_csv_zip, build_text_summary
+from bot.reports import build_chart, build_export_zip, build_text_summary
 
 router = Router(name="stats")
 
@@ -94,11 +94,13 @@ async def on_export_period(cb: CallbackQuery) -> None:
     user = await get_user(cb.from_user.id)
     tz = (user and user["tz"]) or "Europe/Moscow"
     since = _period_since_utc(tz, spec)
-    data = await build_csv_zip(cb.from_user.id, since)
+    data = await build_export_zip(cb.from_user.id, since, f"за {human}", tz)
     await cb.message.answer_document(
         BufferedInputFile(data, filename=f"gastrobot_{slug}.zip"),
         caption=(
-            f"📦 Данные за {human}.\n\n"
+            f"📦 Данные за {human}.\n"
+            "• <b>diary.txt</b> — дневник в читаемом виде (удобно смотреть на телефоне)\n"
+            "• <b>*.csv</b> — таблицы для Excel/выгрузки врачу\n\n"
             "💡 Нажмите и удерживайте файл → <b>Переслать</b>, "
             "чтобы отправить врачу."
         ),

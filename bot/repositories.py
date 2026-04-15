@@ -185,8 +185,9 @@ async def list_food(tg_id: int, since_iso: str) -> list[aiosqlite.Row]:
 async def add_reminder(tg_id: int, kind: str, cron: str, payload: str | None) -> int:
     async with connect() as c:
         cur = await c.execute(
-            "INSERT INTO reminders(tg_id, kind, cron, payload) VALUES(?,?,?,?)",
-            (tg_id, kind, cron, payload),
+            "INSERT INTO reminders(tg_id, kind, cron, payload, created_at) "
+            "VALUES(?,?,?,?,?)",
+            (tg_id, kind, cron, payload, _utcnow()),
         )
         await c.commit()
         return cur.lastrowid or 0
