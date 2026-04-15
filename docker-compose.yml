@@ -1,0 +1,12 @@
+services:
+  gastrobot:
+    build: .
+    container_name: gastrobot
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_PATH: /app/data/bot.db
+      TZ: Europe/Moscow
+      LOG_LEVEL: INFO
+    volumes:
+      - ./data:/app/data
