@@ -81,13 +81,13 @@ async def add_symptoms(tg_id: int, *, pain: int | None, nausea: int | None,
         return cur.lastrowid or 0
 
 
-async def list_symptoms(tg_id: int, days: int) -> list[aiosqlite.Row]:
+async def list_symptoms(tg_id: int, since_iso: str) -> list[aiosqlite.Row]:
     async with connect() as c:
         c.row_factory = aiosqlite.Row
         cur = await c.execute(
-            "SELECT * FROM symptom_entries WHERE tg_id=? AND ts >= datetime('now', ?) "
+            "SELECT * FROM symptom_entries WHERE tg_id=? AND ts >= ? "
             "ORDER BY ts ASC",
-            (tg_id, f"-{days} days"),
+            (tg_id, since_iso),
         )
         return await cur.fetchall()
 
@@ -134,24 +134,25 @@ async def get_med(med_id: int, tg_id: int) -> aiosqlite.Row | None:
 
 
 async def add_intake(tg_id: int, *, med_id: int | None, med_name: str,
-                     dose: str | None, notes: str | None) -> int:
+                     dose: str | None, notes: str | None,
+                     ts: str | None = None) -> int:
     async with connect() as c:
         cur = await c.execute(
             "INSERT INTO med_intakes(tg_id, med_id, med_name, dose, ts, notes) "
             "VALUES(?,?,?,?,?,?)",
-            (tg_id, med_id, med_name, dose, _utcnow(), notes),
+            (tg_id, med_id, med_name, dose, ts or _utcnow(), notes),
         )
         await c.commit()
         return cur.lastrowid or 0
 
 
-async def list_intakes(tg_id: int, days: int) -> list[aiosqlite.Row]:
+async def list_intakes(tg_id: int, since_iso: str) -> list[aiosqlite.Row]:
     async with connect() as c:
         c.row_factory = aiosqlite.Row
         cur = await c.execute(
-            "SELECT * FROM med_intakes WHERE tg_id=? AND ts >= datetime('now', ?) "
+            "SELECT * FROM med_intakes WHERE tg_id=? AND ts >= ? "
             "ORDER BY ts ASC",
-            (tg_id, f"-{days} days"),
+            (tg_id, since_iso),
         )
         return await cur.fetchall()
 
@@ -168,13 +169,13 @@ async def add_food(tg_id: int, description: str, notes: str | None) -> int:
         return cur.lastrowid or 0
 
 
-async def list_food(tg_id: int, days: int) -> list[aiosqlite.Row]:
+async def list_food(tg_id: int, since_iso: str) -> list[aiosqlite.Row]:
     async with connect() as c:
         c.row_factory = aiosqlite.Row
         cur = await c.execute(
-            "SELECT * FROM food_entries WHERE tg_id=? AND ts >= datetime('now', ?) "
+            "SELECT * FROM food_entries WHERE tg_id=? AND ts >= ? "
             "ORDER BY ts ASC",
-            (tg_id, f"-{days} days"),
+            (tg_id, since_iso),
         )
         return await cur.fetchall()
 

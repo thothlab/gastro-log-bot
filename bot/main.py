@@ -25,7 +25,7 @@ async def set_bot_commands(bot: Bot) -> None:
         BotCommand(command="food", description="Записать еду"),
         BotCommand(command="remind", description="Напоминания"),
         BotCommand(command="stats", description="Статистика и график"),
-        BotCommand(command="export", description="Выгрузка CSV"),
+        BotCommand(command="export", description="Выгрузка в файл"),
         BotCommand(command="settings", description="Часовой пояс и время"),
         BotCommand(command="privacy", description="Политика хранения"),
         BotCommand(command="delete", description="Удалить мои данные"),

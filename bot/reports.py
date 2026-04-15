@@ -15,10 +15,10 @@ import matplotlib.pyplot as plt  # noqa: E402
 from bot.repositories import list_food, list_intakes, list_symptoms
 
 
-async def build_csv_zip(tg_id: int, days: int) -> bytes:
-    symptoms = await list_symptoms(tg_id, days)
-    intakes = await list_intakes(tg_id, days)
-    food = await list_food(tg_id, days)
+async def build_csv_zip(tg_id: int, since_iso: str) -> bytes:
+    symptoms = await list_symptoms(tg_id, since_iso)
+    intakes = await list_intakes(tg_id, since_iso)
+    food = await list_food(tg_id, since_iso)
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -43,15 +43,14 @@ def _csv(header: list[str], rows, keys: list[str] | None = None) -> str:
     out = io.StringIO()
     w = csv.writer(out)
     w.writerow(header)
-    # подменим заголовок 'ts_utc' на ключ 'ts'
     effective_keys = ["ts" if k == "ts_utc" else k for k in keys]
     for r in rows:
         w.writerow([r[k] for k in effective_keys])
     return out.getvalue()
 
 
-async def build_chart(tg_id: int, days: int) -> bytes | None:
-    symptoms = await list_symptoms(tg_id, days)
+async def build_chart(tg_id: int, since_iso: str, period_label: str) -> bytes | None:
+    symptoms = await list_symptoms(tg_id, since_iso)
     if not symptoms:
         return None
 
@@ -62,6 +61,10 @@ async def build_chart(tg_id: int, days: int) -> bytes | None:
             v = r[k]
             if v is not None:
                 by_day[day][k].append(v)
+
+    # График за один день бесполезен (одна точка на метрику) — пропустим.
+    if len(by_day) < 2:
+        return None
 
     days_sorted = sorted(by_day.keys())
     xs = [datetime.fromisoformat(d) for d in days_sorted]
@@ -74,13 +77,12 @@ async def build_chart(tg_id: int, days: int) -> bytes | None:
         ("bloating", "Вздутие"),
     ]:
         ys = [mean(by_day[d][metric]) if by_day[d][metric] else None for d in days_sorted]
-        # matplotlib умеет пропускать None при masked-подходе — фильтруем явно
         xs_f = [x for x, y in zip(xs, ys) if y is not None]
         ys_f = [y for y in ys if y is not None]
         if ys_f:
             ax.plot(xs_f, ys_f, marker="o", label=label)
 
-    ax.set_title(f"Симптомы за {days} дн. (среднее в день, шкала 0–10)")
+    ax.set_title(f"Симптомы {period_label} (среднее в день, шкала 0–10)")
     ax.set_ylim(0, 10)
     ax.set_ylabel("Интенсивность")
     ax.grid(True, alpha=0.3)
@@ -94,12 +96,12 @@ async def build_chart(tg_id: int, days: int) -> bytes | None:
     return out.getvalue()
 
 
-async def build_text_summary(tg_id: int, days: int) -> str:
-    symptoms = await list_symptoms(tg_id, days)
-    intakes = await list_intakes(tg_id, days)
-    food = await list_food(tg_id, days)
+async def build_text_summary(tg_id: int, since_iso: str, period_label: str) -> str:
+    symptoms = await list_symptoms(tg_id, since_iso)
+    intakes = await list_intakes(tg_id, since_iso)
+    food = await list_food(tg_id, since_iso)
 
-    lines = [f"📊 <b>Сводка за {days} дн.</b>", ""]
+    lines = [f"📊 <b>Сводка {period_label}</b>", ""]
 
     if not symptoms:
         lines.append("Записей симптомов нет.")
