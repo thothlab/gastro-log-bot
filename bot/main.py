@@ -27,10 +27,10 @@ async def set_bot_commands(bot: Bot) -> None:
         BotCommand(command="stats", description="Статистика и график"),
         BotCommand(command="export", description="Выгрузка в файл"),
         BotCommand(command="settings", description="Часовой пояс и время"),
-        BotCommand(command="privacy", description="Политика хранения"),
+        BotCommand(command="cancel", description="Отменить ввод"),
         BotCommand(command="delete", description="Удалить мои данные"),
+        BotCommand(command="privacy", description="Политика хранения"),
         BotCommand(command="help", description="Помощь"),
-        BotCommand(command="cancel", description="Отменить анкету"),
     ])
 
 
