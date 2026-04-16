@@ -109,7 +109,3 @@ async def on_export_period(cb: CallbackQuery) -> None:
             "• <b>*.csv</b> — таблицы для Excel/выгрузки врачу"
         ),
     )
-    await cb.message.answer(
-        "💡 Нажмите и удерживайте файл → <b>Переслать</b>, "
-        "чтобы отправить врачу."
-    )
