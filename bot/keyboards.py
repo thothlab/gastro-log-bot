@@ -108,3 +108,22 @@ def intake_time_keyboard() -> InlineKeyboardMarkup:
         ],
         [InlineKeyboardButton(text="✏️ Другое время (HH:MM)", callback_data="itime:custom")],
     ])
+
+
+def food_time_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🕐 Сейчас", callback_data="ftime:0")],
+        [
+            InlineKeyboardButton(text="15 мин назад", callback_data="ftime:15"),
+            InlineKeyboardButton(text="30 мин назад", callback_data="ftime:30"),
+        ],
+        [
+            InlineKeyboardButton(text="1 ч назад", callback_data="ftime:60"),
+            InlineKeyboardButton(text="2 ч назад", callback_data="ftime:120"),
+        ],
+        [
+            InlineKeyboardButton(text="4 ч назад", callback_data="ftime:240"),
+            InlineKeyboardButton(text="8 ч назад", callback_data="ftime:480"),
+        ],
+        [InlineKeyboardButton(text="✏️ Другое время (HH:MM)", callback_data="ftime:custom")],
+    ])

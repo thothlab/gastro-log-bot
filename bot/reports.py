@@ -327,10 +327,16 @@ async def build_chart(tg_id: int, since_iso: str, period_label: str) -> bytes | 
     return out.getvalue()
 
 
-async def build_text_summary(tg_id: int, since_iso: str, period_label: str) -> str:
+async def build_text_summary(tg_id: int, since_iso: str, period_label: str,
+                             tz_name: str = "Europe/Moscow") -> str:
     symptoms = await list_symptoms(tg_id, since_iso)
     intakes = await list_intakes(tg_id, since_iso)
     food = await list_food(tg_id, since_iso)
+
+    try:
+        tz = ZoneInfo(tz_name)
+    except Exception:
+        tz = ZoneInfo("Europe/Moscow")
 
     lines = [f"📊 <b>Сводка {period_label}</b>", ""]
 
@@ -353,13 +359,33 @@ async def build_text_summary(tg_id: int, since_iso: str, period_label: str) -> s
     lines.append("")
     lines.append(f"<b>Приёмов лекарств:</b> {len(intakes)}")
     if intakes:
-        counts: dict[str, int] = defaultdict(int)
+        grouped: dict[str, list[str]] = defaultdict(list)
         for r in intakes:
-            counts[r["med_name"]] += 1
-        for name, n in sorted(counts.items(), key=lambda x: -x[1]):
-            lines.append(f"  • {name} — {n}")
+            dt = _parse_db_ts(r["ts"]).astimezone(tz)
+            t = dt.strftime("%d.%m %H:%M") if period_label != "за сегодня" else dt.strftime("%H:%M")
+            label = t
+            if r["dose"]:
+                label += f" ({r['dose']})"
+            grouped[r["med_name"]].append(label)
+        for name, times in sorted(grouped.items(), key=lambda x: -len(x[1])):
+            lines.append(f"  • {name} — {len(times)}")
+            shown = times[:20]
+            lines.append(f"    {', '.join(shown)}")
+            if len(times) > 20:
+                lines.append(f"    … и ещё {len(times) - 20}")
 
     lines.append("")
     lines.append(f"<b>Записей о еде:</b> {len(food)}")
+    if food:
+        shown_food = food[:20]
+        for f in shown_food:
+            dt = _parse_db_ts(f["ts"]).astimezone(tz)
+            t = dt.strftime("%d.%m %H:%M") if period_label != "за сегодня" else dt.strftime("%H:%M")
+            line = f"  • {t} — {f['description']}"
+            if f["notes"]:
+                line += f" ({f['notes']})"
+            lines.append(line)
+        if len(food) > 20:
+            lines.append(f"  … и ещё {len(food) - 20}")
 
     return "\n".join(lines)

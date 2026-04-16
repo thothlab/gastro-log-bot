@@ -54,13 +54,19 @@ async def on_stats_period(cb: CallbackQuery) -> None:
     user = await get_user(cb.from_user.id)
     tz = (user and user["tz"]) or "Europe/Moscow"
     since = _period_since_utc(tz, spec)
-    summary = await build_text_summary(cb.from_user.id, since, label)
+    summary = await build_text_summary(cb.from_user.id, since, label, tz_name=tz)
     chart = await build_chart(cb.from_user.id, since, label)
     if chart is not None:
-        await cb.message.answer_photo(
-            BufferedInputFile(chart, filename=f"stats_{spec}.png"),
-            caption=summary,
-        )
+        if len(summary) <= 1024:
+            await cb.message.answer_photo(
+                BufferedInputFile(chart, filename=f"stats_{spec}.png"),
+                caption=summary,
+            )
+        else:
+            await cb.message.answer_photo(
+                BufferedInputFile(chart, filename=f"stats_{spec}.png"),
+            )
+            await cb.message.answer(summary)
     else:
         await cb.message.answer(summary)
 

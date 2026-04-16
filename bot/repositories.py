@@ -159,11 +159,12 @@ async def list_intakes(tg_id: int, since_iso: str) -> list[aiosqlite.Row]:
 
 # ---------- food ----------
 
-async def add_food(tg_id: int, description: str, notes: str | None) -> int:
+async def add_food(tg_id: int, description: str, notes: str | None,
+                   ts: str | None = None) -> int:
     async with connect() as c:
         cur = await c.execute(
             "INSERT INTO food_entries(tg_id, ts, description, notes) VALUES(?,?,?,?)",
-            (tg_id, _utcnow(), description, notes),
+            (tg_id, ts or _utcnow(), description, notes),
         )
         await c.commit()
         return cur.lastrowid or 0
