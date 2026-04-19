@@ -6,8 +6,9 @@ CREATE TABLE IF NOT EXISTS users (
     username     TEXT,
     first_name   TEXT,
     tz           TEXT NOT NULL DEFAULT 'Europe/Moscow',
-    morning_time TEXT DEFAULT '09:00',
-    evening_time TEXT DEFAULT '21:00',
+    morning_time   TEXT DEFAULT '07:30',
+    afternoon_time TEXT DEFAULT '15:00',
+    evening_time   TEXT DEFAULT '21:00',
     consent_at   TEXT,
     created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -44,6 +45,14 @@ CREATE TABLE IF NOT EXISTS med_intakes (
     notes    TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_intakes_user_ts ON med_intakes(tg_id, ts);
+
+CREATE TABLE IF NOT EXISTS wellbeing_entries (
+    id    INTEGER PRIMARY KEY AUTOINCREMENT,
+    tg_id INTEGER NOT NULL REFERENCES users(tg_id) ON DELETE CASCADE,
+    ts    TEXT NOT NULL,
+    text  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_wellbeing_user_ts ON wellbeing_entries(tg_id, ts);
 
 CREATE TABLE IF NOT EXISTS food_entries (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,

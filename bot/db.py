@@ -33,6 +33,25 @@ async def _migrate(conn: aiosqlite.Connection) -> None:
             "WHERE created_at IS NULL"
         )
 
+    cur = await conn.execute("PRAGMA table_info(users)")
+    user_cols = {row[1] for row in await cur.fetchall()}
+    if "afternoon_time" not in user_cols:
+        await conn.execute(
+            "ALTER TABLE users ADD COLUMN afternoon_time TEXT DEFAULT '15:00'"
+        )
+
+    await conn.execute(
+        "CREATE TABLE IF NOT EXISTS wellbeing_entries ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "tg_id INTEGER NOT NULL REFERENCES users(tg_id) ON DELETE CASCADE, "
+        "ts TEXT NOT NULL, "
+        "text TEXT NOT NULL)"
+    )
+    await conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_wellbeing_user_ts "
+        "ON wellbeing_entries(tg_id, ts)"
+    )
+
 
 def connect() -> aiosqlite.Connection:
     return aiosqlite.connect(settings.db_file)

@@ -43,12 +43,16 @@ async def has_consent(tg_id: int) -> bool:
 
 
 async def update_settings(tg_id: int, *, tz: str | None = None,
-                          morning: str | None = None, evening: str | None = None) -> None:
+                          morning: str | None = None,
+                          afternoon: str | None = None,
+                          evening: str | None = None) -> None:
     fields, values = [], []
     if tz is not None:
         fields.append("tz=?"); values.append(tz)
     if morning is not None:
         fields.append("morning_time=?"); values.append(morning)
+    if afternoon is not None:
+        fields.append("afternoon_time=?"); values.append(afternoon)
     if evening is not None:
         fields.append("evening_time=?"); values.append(evening)
     if not fields:
@@ -86,6 +90,29 @@ async def list_symptoms(tg_id: int, since_iso: str) -> list[aiosqlite.Row]:
         c.row_factory = aiosqlite.Row
         cur = await c.execute(
             "SELECT * FROM symptom_entries WHERE tg_id=? AND ts >= ? "
+            "ORDER BY ts ASC",
+            (tg_id, since_iso),
+        )
+        return await cur.fetchall()
+
+
+# ---------- wellbeing ----------
+
+async def add_wellbeing(tg_id: int, text: str, ts: str | None = None) -> int:
+    async with connect() as c:
+        cur = await c.execute(
+            "INSERT INTO wellbeing_entries(tg_id, ts, text) VALUES(?,?,?)",
+            (tg_id, ts or _utcnow(), text),
+        )
+        await c.commit()
+        return cur.lastrowid or 0
+
+
+async def list_wellbeing(tg_id: int, since_iso: str) -> list[aiosqlite.Row]:
+    async with connect() as c:
+        c.row_factory = aiosqlite.Row
+        cur = await c.execute(
+            "SELECT * FROM wellbeing_entries WHERE tg_id=? AND ts >= ? "
             "ORDER BY ts ASC",
             (tg_id, since_iso),
         )

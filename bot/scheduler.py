@@ -12,8 +12,27 @@ from bot.repositories import get_reminder, get_user, list_reminders, list_all_ac
 log = logging.getLogger(__name__)
 
 REMINDER_TEXTS = {
-    "morning": "🌅 Доброе утро! Как самочувствие? Запишите симптомы: /log",
-    "evening": "🌙 Вечерний дневник: отметьте симптомы за день — /log",
+    "morning": (
+        "🌅 Доброе утро! Как твоё самочувствие?\n"
+        "Не забудь ввести данные о самочувствии — /well\n"
+        "• Симптомы: /log\n"
+        "• Что ели? /food\n"
+        "• Лекарства: /med"
+    ),
+    "afternoon": (
+        "☀️ Как твоё самочувствие?\n"
+        "Не забудь ввести данные о самочувствии — /well\n"
+        "• Симптомы: /log\n"
+        "• Что ели? /food\n"
+        "• Лекарства: /med"
+    ),
+    "evening": (
+        "🌙 Как твоё самочувствие?\n"
+        "Не забудь ввести данные о самочувствии — /well\n"
+        "• Симптомы за день: /log\n"
+        "• Что ели сегодня? /food\n"
+        "• Лекарства: /med"
+    ),
     "med": "💊 Пора принять {name}{dose}. Отметить приём: /med",
 }
 
@@ -58,7 +77,9 @@ class ReminderScheduler:
             cron = r["cron"]
             # для morning/evening — берём актуальное время из users
             if r["kind"] == "morning":
-                cron = _hhmm_to_cron(u["morning_time"] or "09:00")
+                cron = _hhmm_to_cron(u["morning_time"] or "08:00")
+            elif r["kind"] == "afternoon":
+                cron = _hhmm_to_cron(u["afternoon_time"] or "15:00")
             elif r["kind"] == "evening":
                 cron = _hhmm_to_cron(u["evening_time"] or "21:00")
             self._add_job(

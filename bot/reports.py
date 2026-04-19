@@ -13,7 +13,13 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from bot.repositories import list_food, list_intakes, list_reminders, list_symptoms
+from bot.repositories import (
+    list_food,
+    list_intakes,
+    list_reminders,
+    list_symptoms,
+    list_wellbeing,
+)
 
 WEEKDAYS_RU = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"]
 MONTHS_RU = [
@@ -31,10 +37,12 @@ async def build_export_zip(tg_id: int, since_iso: str, period_label: str,
     symptoms = await list_symptoms(tg_id, since_iso)
     intakes = await list_intakes(tg_id, since_iso)
     food = await list_food(tg_id, since_iso)
+    wellbeing = await list_wellbeing(tg_id, since_iso)
     reminders = await list_reminders(tg_id)
 
     text = _build_text_report(
-        symptoms=symptoms, intakes=intakes, food=food, reminders=reminders,
+        symptoms=symptoms, intakes=intakes, food=food,
+        wellbeing=wellbeing, reminders=reminders,
         since_iso=since_iso, period_label=period_label, tz_name=tz_name,
     )
 
@@ -54,6 +62,10 @@ async def build_export_zip(tg_id: int, since_iso: str, period_label: str,
             ["id", "ts_utc", "description", "notes"],
             food,
         ))
+        zf.writestr("wellbeing.csv", _csv(
+            ["id", "ts_utc", "text"],
+            wellbeing,
+        ))
     return buf.getvalue()
 
 
@@ -70,7 +82,7 @@ def _csv(header: list[str], rows, keys: list[str] | None = None) -> str:
 
 # ---------- text report ----------
 
-def _build_text_report(*, symptoms, intakes, food, reminders,
+def _build_text_report(*, symptoms, intakes, food, wellbeing, reminders,
                        since_iso: str, period_label: str, tz_name: str) -> str:
     try:
         tz = ZoneInfo(tz_name)
@@ -87,6 +99,7 @@ def _build_text_report(*, symptoms, intakes, food, reminders,
     lines.append("")
     lines.append(
         f"Итого: симптомов {len(symptoms)} · "
+        f"самочувствия {len(wellbeing)} · "
         f"лекарств {len(intakes)} · "
         f"еды {len(food)}"
     )
@@ -119,7 +132,7 @@ def _build_text_report(*, symptoms, intakes, food, reminders,
             lines.append(f"   … и ещё {len(missed) - MISSED_CAP}")
         lines.append("")
 
-    events = _collect_events(symptoms, intakes, food, tz)
+    events = _collect_events(symptoms, intakes, food, wellbeing, tz)
     if not events:
         lines.append("Записей за период нет.")
         return "\n".join(lines)
@@ -147,6 +160,8 @@ def _cron_to_hhmm(cron: str) -> str:
 def _reminder_label(r) -> str:
     if r["kind"] == "morning":
         return "утренний дневник"
+    if r["kind"] == "afternoon":
+        return "дневной дневник"
     if r["kind"] == "evening":
         return "вечерний дневник"
     return r["payload"] or "лекарство"
@@ -169,8 +184,14 @@ def _parse_db_ts(raw: str) -> datetime:
     return dt
 
 
-def _collect_events(symptoms, intakes, food, tz: ZoneInfo) -> list[tuple[datetime, str]]:
+def _collect_events(symptoms, intakes, food, wellbeing,
+                    tz: ZoneInfo) -> list[tuple[datetime, str]]:
     events: list[tuple[datetime, str]] = []
+
+    for w in wellbeing:
+        dt = _parse_db_ts(w["ts"]).astimezone(tz)
+        t = dt.strftime("%H:%M")
+        events.append((dt, f"🫁  {t}  Самочувствие: «{w['text']}»"))
 
     for s in symptoms:
         dt = _parse_db_ts(s["ts"]).astimezone(tz)
@@ -332,6 +353,7 @@ async def build_text_summary(tg_id: int, since_iso: str, period_label: str,
     symptoms = await list_symptoms(tg_id, since_iso)
     intakes = await list_intakes(tg_id, since_iso)
     food = await list_food(tg_id, since_iso)
+    wellbeing = await list_wellbeing(tg_id, since_iso)
 
     try:
         tz = ZoneInfo(tz_name)
@@ -355,6 +377,17 @@ async def build_text_summary(tg_id: int, since_iso: str, period_label: str,
         stool_vals = [r["stool"] for r in symptoms if r["stool"] is not None]
         if stool_vals:
             lines.append(f"• Bristol, ср: {round(mean(stool_vals), 1)} (n={len(stool_vals)})")
+
+    lines.append("")
+    lines.append(f"<b>Записей самочувствия:</b> {len(wellbeing)}")
+    if wellbeing:
+        shown_w = wellbeing[:20]
+        for w in shown_w:
+            dt = _parse_db_ts(w["ts"]).astimezone(tz)
+            t = dt.strftime("%d.%m %H:%M") if period_label != "за сегодня" else dt.strftime("%H:%M")
+            lines.append(f"  • {t} — {w['text']}")
+        if len(wellbeing) > 20:
+            lines.append(f"  … и ещё {len(wellbeing) - 20}")
 
     lines.append("")
     lines.append(f"<b>Приёмов лекарств:</b> {len(intakes)}")

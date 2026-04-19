@@ -31,19 +31,24 @@ TIME_RE = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
 
 class RemFSM(StatesGroup):
     morning_time = State()
+    afternoon_time = State()
     evening_time = State()
     med_pick = State()
     med_time = State()
 
 
-def _main_kb(has_morning: bool, has_evening: bool) -> InlineKeyboardMarkup:
+def _main_kb(has_morning: bool, has_afternoon: bool, has_evening: bool) -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton(
-            text=("✅ " if has_morning else "➕ ") + "Утреннее напоминание",
+            text=("✅ " if has_morning else "➕ ") + "Утреннее напоминание (07:30)",
             callback_data="rem:morning",
         )],
         [InlineKeyboardButton(
-            text=("✅ " if has_evening else "➕ ") + "Вечернее напоминание",
+            text=("✅ " if has_afternoon else "➕ ") + "Дневное напоминание (15:00)",
+            callback_data="rem:afternoon",
+        )],
+        [InlineKeyboardButton(
+            text=("✅ " if has_evening else "➕ ") + "Вечернее напоминание (21:00)",
             callback_data="rem:evening",
         )],
         [InlineKeyboardButton(text="💊 Напоминание про лекарство", callback_data="rem:med")],
@@ -64,16 +69,17 @@ async def cmd_remind(message: Message, state: FSMContext) -> None:
     await state.clear()
     reminders = await list_reminders(message.from_user.id)
     has_m = any(r["kind"] == "morning" for r in reminders)
+    has_a = any(r["kind"] == "afternoon" for r in reminders)
     has_e = any(r["kind"] == "evening" for r in reminders)
     await message.answer("🔔 <b>Напоминания</b>\nВыберите действие:",
-                         reply_markup=_main_kb(has_m, has_e))
+                         reply_markup=_main_kb(has_m, has_a, has_e))
 
 
 @router.callback_query(F.data == "rem:morning")
 async def on_rem_morning(cb: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(RemFSM.morning_time)
     u = await get_user(cb.from_user.id)
-    cur = u["morning_time"] if u else "09:00"
+    cur = u["morning_time"] if u else "07:30"
     await cb.message.answer(f"Время утреннего напоминания (HH:MM). Текущее: {cur}")
     await cb.answer()
 
@@ -95,6 +101,33 @@ async def set_morning(message: Message, state: FSMContext, scheduler=None) -> No
         await scheduler.add_reminder(rid)
     await state.clear()
     await message.answer(f"✅ Утреннее напоминание настроено на {t}.")
+
+
+@router.callback_query(F.data == "rem:afternoon")
+async def on_rem_afternoon(cb: CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(RemFSM.afternoon_time)
+    u = await get_user(cb.from_user.id)
+    cur = u["afternoon_time"] if u else "15:00"
+    await cb.message.answer(f"Время дневного напоминания (HH:MM). Текущее: {cur}")
+    await cb.answer()
+
+
+@router.message(RemFSM.afternoon_time)
+async def set_afternoon(message: Message, state: FSMContext, scheduler=None) -> None:
+    t = (message.text or "").strip()
+    if not TIME_RE.match(t):
+        await message.answer("Формат HH:MM. Попробуйте ещё раз:"); return
+    await update_settings(message.from_user.id, afternoon=t)
+    for r in await list_reminders(message.from_user.id):
+        if r["kind"] == "afternoon":
+            await deactivate_reminder(r["id"], message.from_user.id)
+            if scheduler is not None:
+                scheduler.remove_reminder(r["id"])
+    rid = await add_reminder(message.from_user.id, "afternoon", _hhmm_to_cron(t), None)
+    if scheduler is not None:
+        await scheduler.add_reminder(rid)
+    await state.clear()
+    await message.answer(f"✅ Дневное напоминание настроено на {t}.")
 
 
 @router.callback_query(F.data == "rem:evening")
@@ -179,6 +212,8 @@ async def on_rem_list(cb: CallbackQuery) -> None:
         time_str = f"{int(h):02d}:{int(m):02d}"
         if r["kind"] == "morning":
             lines.append(f"• Утро — {time_str}")
+        elif r["kind"] == "afternoon":
+            lines.append(f"• День — {time_str}")
         elif r["kind"] == "evening":
             lines.append(f"• Вечер — {time_str}")
         else:

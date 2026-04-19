@@ -12,13 +12,14 @@ from aiogram.types import BotCommand
 from bot.config import settings
 from bot.db import init_db
 from bot.handlers import food, meds, reminders, settings_ as settings_handlers
-from bot.handlers import start, stats, symptoms
+from bot.handlers import start, stats, symptoms, wellbeing
 from bot.middlewares import ThrottleMiddleware, UserUpsertMiddleware
 from bot.scheduler import ReminderScheduler
 
 
 async def set_bot_commands(bot: Bot) -> None:
     await bot.set_my_commands([
+        BotCommand(command="well", description="Записать самочувствие (текстом)"),
         BotCommand(command="log", description="Записать симптомы"),
         BotCommand(command="med", description="Отметить приём лекарства"),
         BotCommand(command="meds", description="Список препаратов"),
@@ -48,6 +49,7 @@ async def main() -> None:
     dp.update.middleware(ThrottleMiddleware(interval=0.4))
 
     dp.include_router(start.router)
+    dp.include_router(wellbeing.router)
     dp.include_router(symptoms.router)
     dp.include_router(meds.router)
     dp.include_router(food.router)
