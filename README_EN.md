@@ -21,12 +21,13 @@ Or self-host — see [Run](#run).
 | Command | What it does |
 |---|---|
 | `/start` | Consent to data processing + welcome screen |
+| `/well` | Free-form text note about how you feel — no scales |
 | `/log` | Symptom questionnaire: pain, nausea, heartburn, bloating (0–10 scale), stool on the [Bristol scale](https://en.wikipedia.org/wiki/Bristol_stool_scale) (1–7), free-form note |
 | `/med`, `/meds` | Manage medication list and quickly log an intake |
 | `/food` | Food and trigger diary |
-| `/remind` | Morning / evening reminders and per-medication schedules — in the user's timezone |
+| `/remind` | Three daily reminders (defaults 07:30 / 15:00 / 21:00) and per-medication schedules — in the user's timezone |
 | `/stats` | Text summary and PNG chart over 7 / 30 / 90 days |
-| `/export` | ZIP archive with CSV files (symptoms, intakes, food) — for sharing with your doctor |
+| `/export` | ZIP archive: `diary.txt` + CSV files (symptoms, wellbeing, intakes, food) — for sharing with your doctor |
 | `/settings` | Timezone, morning / evening reminder times |
 | `/privacy` | Data storage policy |
 | `/delete` | Full and irreversible data deletion |
